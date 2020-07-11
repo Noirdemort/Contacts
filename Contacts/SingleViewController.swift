@@ -33,24 +33,24 @@ class SingleViewController: NSViewController {
 	
 	var vCard: (_ name: String, _ phone: String)->String = { (name, phone) in
 		return """
-			BEGIN:VCARD\n
-			VERSION:2.1\n
-			FN: \(name)\n
-			TEL;HOME;VOICE:\(phone)\n
-			END:VCARD\n
+		BEGIN:VCARD
+		VERSION:2.1
+		FN: \(name)
+		TEL;HOME;VOICE:\(phone)
+		END:VCARD\n
 		"""
 	}
 	
 	var selectedExportFormat = ExportFormats.json.rawValue
 	
-	
-	
 	var selectedContact: Contact? {
 		willSet {
-			self.name.stringValue = newValue?.name as! String
-			self.phone.stringValue = newValue?.number as! String
+			guard let newContact = newValue else { return }
+			self.name.stringValue = newContact.name
+			self.phone.stringValue = newContact.number
 		}
 	}
+	
 		
 	@IBOutlet weak var name: NSTextField!
 	
@@ -72,22 +72,22 @@ class SingleViewController: NSViewController {
 	
 	@IBOutlet weak var exportFormat: NSPopUpButton!
 	
+	
 	override func viewDidLoad() {
 		super.viewDidLoad()
 		loadData()
+		
 		tableColumn.tableView?.delegate = self
 		tableColumn.tableView?.dataSource = self
 		contactSourceView.delegate = self
 		contactSourceView.dataSource = self
 		phone.formatter = nil
 		
+		exportFormat.removeAllItems()
 		exportFormat.addItems(withTitles: ExportFormats.all())
-		exportFormat.setTitle("Choose Export Format")
-		exportFormat.selectItem(at: 1)
+		exportFormat.selectItem(at: 0)
 		
-		loadData()
 	}
-	
 	
 	
 	func loadData(){
@@ -162,10 +162,12 @@ class SingleViewController: NSViewController {
 		let fileExtension = self.selectedExportFormat == ExportFormats.json.rawValue ? "json" : "vcf"
 		
 		panel.title = "Save As \(self.selectedExportFormat)"
-		panel.nameFieldStringValue = "Untitled.\(fileExtension)"
+		panel.nameFieldStringValue = "\(contact.name).\(fileExtension)"
 		
 		DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+			
 			let result = panel.runModal()
+			
 			if result != .OK {
 				return
 			}
