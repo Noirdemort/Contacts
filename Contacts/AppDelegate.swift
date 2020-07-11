@@ -11,14 +11,50 @@ import Cocoa
 @NSApplicationMain
 class AppDelegate: NSObject, NSApplicationDelegate {
 
-
-
+	let filePath = "\(FileManager.default.homeDirectoryForCurrentUser.relativeString)contacts.json"
+	
+	
 	func applicationDidFinishLaunching(_ aNotification: Notification) {
 		// Insert code here to initialize your application
 	}
+	
+	func applicationDidResignActive(_ notification: Notification) {
+			let encoder = JSONEncoder()
+			encoder.dataEncodingStrategy = .deferredToData
+			let data = try? encoder.encode(CONTACTS)
+			let url = URL(string: filePath)
+			try? data?.write(to: url!)
+//			print("data saved at: \(String(describing: url))")
+	}
+	
+	func shell(launchPath: String, arguments: [String]) -> String?
+	{
+		let task = Process()
+		task.launchPath = launchPath
+		task.arguments = arguments
+
+		let pipe = Pipe()
+		task.standardOutput = pipe
+		task.launch()
+
+		let data = pipe.fileHandleForReading.readDataToEndOfFile()
+		let output = String(data: data, encoding: String.Encoding.utf8)
+
+		return output
+	}
+
 
 	func applicationWillTerminate(_ aNotification: Notification) {
 		// Insert code here to tear down your application
+		
+		let encoder = JSONEncoder()
+		encoder.dataEncodingStrategy = .deferredToData
+		
+		let data = try? encoder.encode(CONTACTS)
+		let url = URL(string: filePath)
+		try? data?.write(to: url!)
+//		print("data saved at: \(url.absoluteString)")
+		
 	}
 
 	// MARK: - Core Data stack
