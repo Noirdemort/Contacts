@@ -14,8 +14,35 @@ protocol ContactModificationDelegate: class {
 }
 
 
+enum ExportFormats: String {
+
+	case json = "json"
+	case vCard = "vCard"
+	
+	static func all() -> [String]{
+		return [json.rawValue, vCard.rawValue]
+	}
+	
+}
+
+
+
+
 
 class SingleViewController: NSViewController {
+	
+	var vCard: (_ name: String, _ phone: String)->String = { (name, phone) in
+		return """
+			BEGIN:VCARD\n
+			VERSION:2.1\n
+			FN: \(name)\n
+			TEL;HOME;VOICE:\(phone)\n
+			END:VCARD\n
+		"""
+	}
+	
+	var selectedExportFormat = ExportFormats.json.rawValue
+	
 	
 	
 	var selectedContact: Contact? {
@@ -41,8 +68,9 @@ class SingleViewController: NSViewController {
 	
 	@IBOutlet weak var tableColumn: NSTableColumn!
 	
-	
 	@IBOutlet weak var contactSourceView: NSOutlineView!
+	
+	@IBOutlet weak var exportFormat: NSPopUpButton!
 	
 	override func viewDidLoad() {
 		super.viewDidLoad()
@@ -52,8 +80,15 @@ class SingleViewController: NSViewController {
 		contactSourceView.delegate = self
 		contactSourceView.dataSource = self
 		phone.formatter = nil
+		
+		exportFormat.addItems(withTitles: ExportFormats.all())
+		exportFormat.setTitle("Choose Export Format")
+		exportFormat.selectItem(at: 1)
+		
 		loadData()
 	}
+	
+	
 	
 	func loadData(){
 		let filePath = "\(FileManager.default.homeDirectoryForCurrentUser.relativeString)contacts.json"
@@ -75,6 +110,13 @@ class SingleViewController: NSViewController {
 			}
 		}
 	}
+	
+	
+	
+	@IBAction func changeExportFormat(_ sender: Any) {
+		self.selectedExportFormat = ExportFormats.all()[self.exportFormat.indexOfSelectedItem]
+	}
+	
 	
 	
 	@IBAction func deleteCurrentContact(_ sender: Any){
@@ -116,17 +158,28 @@ class SingleViewController: NSViewController {
 	
 	@IBAction func exportContact(_ sender: Any) {
 		guard let contact = self.selectedContact else { return }
-		
 		let panel = NSSavePanel()
+		let fileExtension = self.selectedExportFormat == ExportFormats.json.rawValue ? "json" : "vcf"
+		
+		panel.title = "Save As \(self.selectedExportFormat)"
+		panel.nameFieldStringValue = "Untitled.\(fileExtension)"
+		
 		DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
 			let result = panel.runModal()
-			if result == .OK {
+			if result != .OK {
+				return
+			}
+			
+			if self.selectedExportFormat == ExportFormats.json.rawValue {
 				let encoder = JSONEncoder()
 				encoder.dataEncodingStrategy = .deferredToData
 				let data = try? encoder.encode(contact)
 				try? data?.write(to: panel.url!)
-					
+				return
 			}
+			
+			try? self.vCard(contact.name, contact.number).data(using: .utf8)?.write(to: panel.url!)
+			
 		}
 		
 	}
@@ -138,6 +191,9 @@ class SingleViewController: NSViewController {
 	
 
 }
+
+
+// MARK:- ContactModificationDelegate
 
 extension SingleViewController: ContactModificationDelegate {
 	
@@ -157,6 +213,8 @@ extension SingleViewController: ContactModificationDelegate {
 	
 }
 
+
+// MARK:- TABLEVIEW Delegate
 
 extension SingleViewController: NSTableViewDelegate {
 
@@ -183,6 +241,7 @@ extension SingleViewController: NSTableViewDataSource {
 
 }
 
+// MARK:- OUTLINE Delegate
 
 extension SingleViewController: NSOutlineViewDelegate {
   
@@ -203,6 +262,7 @@ extension SingleViewController: NSOutlineViewDelegate {
 		self.selectedContact = CONTACTS[outlineView.selectedRow]
 	}
 }
+
 
 extension SingleViewController: NSOutlineViewDataSource {
   
