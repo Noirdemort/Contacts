@@ -23,7 +23,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 			encoder.dataEncodingStrategy = .deferredToData
 			let data = try? encoder.encode(CONTACTS)
 			let url = URL(string: filePath)
-			try? data?.write(to: url!)
+			try? data?.write(to: url!, options: .atomic)
 //			print("data saved at: \(String(describing: url))")
 	}
 	
@@ -52,7 +52,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 		
 		let data = try? encoder.encode(CONTACTS)
 		let url = URL(string: filePath)
-		try? data?.write(to: url!)
+		try? data?.write(to: url!, options: .atomic)
 //		print("data saved at: \(url.absoluteString)")
 		
 	}
